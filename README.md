@@ -1,4 +1,4 @@
-# bhavasudhan_mini_project
+# daksha_mini_project
 # 2D Graphics Editor (Windows Console)
 
 A simple C program that implements a 2D graphics editor using a character-based canvas.
