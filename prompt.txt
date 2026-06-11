@@ -1,0 +1,509 @@
+AI MODEL USED: GEMINI 3.5FLASH
+
+PROMPT #1: 
+
+Problem Statement: Write a menu driven program for a 2d graphics editor in C using * and  _.
+
+Write functions to draw objects: circle, rectangle, line, and triangle.
+You should be able to
+      add objects to the picture,
+      delete objects from the picture.
+Use a 2d array of characters to store the picture.
+Write a function to display the picture.
+
+Additionally, you can use the ncurses package to create menus and draw pictures.
+
+REPLY: 
+
+Here is a complete, menu-driven C program that implements a 2D graphics editor.
+
+Because standard terminal text cells are taller than they are wide, this code includes an aspect-ratio adjustment (`X_SCALE`) so that your circles and triangles look properly proportioned on your screen rather than stretched out.
+
+### C Implementation (Standard Library)
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+#define WIDTH 60
+#define HEIGHT 30
+#define PI 3.1415926535
+
+// Visual stretch correction: characters are typically taller than they are wide
+#define X_SCALE 2.0 
+
+char canvas[HEIGHT][WIDTH];
+
+// Function Prototypes
+void initCanvas();
+void displayCanvas();
+void drawLine(int x1, int y1, int x2, int y2, char ch);
+void drawRect(int x1, int y1, int x2, int y2, char ch);
+void drawCircle(int cx, int cy, int r, char ch);
+void drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, char ch);
+void deleteObject();
+
+int main() {
+    int choice;
+    initCanvas();
+
+    while (1) {
+        printf("\n--- 2D Graphics Editor ---\n");
+        printf("1. Draw Line\n");
+        printf("2. Draw Rectangle\n");
+        printf("3. Draw Circle\n");
+        printf("4. Draw Triangle\n");
+        printf("5. Erase / Delete an Object Area\n");
+        printf("6. Display Canvas\n");
+        printf("7. Clear Canvas\n");
+        printf("8. Exit\n");
+        printf("Enter your choice: ");
+        if (scanf("%d", &choice) != 1) {
+            printf("Invalid input. Exiting.\n");
+            break;
+        }
+
+        if (choice == 8) {
+            printf("Exiting program. Goodbye!\n");
+            break;
+        }
+
+        switch (choice) {
+            case 1: {
+                int x1, y1, x2, y2;
+                printf("Enter Start Coordinates (x1 y1) [0-%d 0-%d]: ", WIDTH-1, HEIGHT-1);
+                scanf("%d %d", &x1, &y1);
+                printf("Enter End Coordinates (x2 y2): ");
+                scanf("%d %d", &x2, &y2);
+                drawLine(x1, y1, x2, y2, '*');
+                displayCanvas();
+                break;
+            }
+            case 2: {
+                int x1, y1, x2, y2;
+                printf("Enter Top-Left corner (x1 y1): ");
+                scanf("%d %d", &x1, &y1);
+                printf("Enter Bottom-Right corner (x2 y2): ");
+                scanf("%d %d", &x2, &y2);
+                drawRect(x1, y1, x2, y2, '*');
+                displayCanvas();
+                break;
+            }
+            case 3: {
+                int cx, cy, r;
+                printf("Enter Center coordinates (cx cy): ");
+                scanf("%d %d", &cx, &cy);
+                printf("Enter Radius: ");
+                scanf("%d", &r);
+                drawCircle(cx, cy, r, '*');
+                displayCanvas();
+                break;
+            }
+            case 4: {
+                int x1, y1, x2, y2, x3, y3;
+                printf("Enter Vertex 1 (x1 y1): ");
+                scanf("%d %d", &x1, &y1);
+                printf("Enter Vertex 2 (x2 y2): ");
+                scanf("%d %d", &x2, &y2);
+                printf("Enter Vertex 3 (x3 y3): ");
+                scanf("%d %d", &x3, &y3);
+                drawTriangle(x1, y1, x2, y2, x3, y3, '*');
+                displayCanvas();
+                break;
+            }
+            case 5:
+                deleteObject();
+                displayCanvas();
+                break;
+            case 6:
+                displayCanvas();
+                break;
+            case 7:
+                initCanvas();
+                printf("Canvas cleared.\n");
+                break;
+            default:
+                printf("Invalid choice! Please select a valid option.\n");
+        }
+    }
+    return 0;
+}
+
+// Initializes the canvas with the background character '_'
+void initCanvas() {
+    for (int i = 0; i < HEIGHT; i++) {
+        for (int j = 0; j < WIDTH; j++) {
+            canvas[i][j] = '_';
+        }
+    }
+}
+
+// Outputs the 2D grid to the console
+void displayCanvas() {
+    printf("\n--- CURRENT CANVAS ---\n");
+    for (int i = 0; i < HEIGHT; i++) {
+        for (int j = 0; j < WIDTH; j++) {
+            putchar(canvas[i][j]);
+        }
+        putchar('\n');
+    }
+}
+
+// Safe plot function to ensure we don't write out of bounds
+void plot(int x, int y, char ch) {
+    if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
+        canvas[y][x] = ch;
+    }
+}
+
+// Bresenham's Line Generation Algorithm
+void drawLine(int x1, int y1, int x2, int y2, char ch) {
+    int dx = abs(x2 - x1);
+    int dy = abs(y2 - y1);
+    int sx = (x1 < x2) ? 1 : -1;
+    int sy = (y1 < y2) ? 1 : -1;
+    int err = dx - dy;
+
+    while (1) {
+        plot(x1, y1, ch);
+        if (x1 == x2 && y1 == y2) break;
+        int e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            x1 += sx;
+        }
+        if (e2 < dx) {
+            err += dx;
+            y1 += sy;
+        }
+    }
+}
+
+// Draws a rectangle using 4 lines
+void drawRect(int x1, int y1, int x2, int y2, char ch) {
+    drawLine(x1, y1, x2, y1, ch); // Top
+    drawLine(x1, y2, x2, y2, ch); // Bottom
+    drawLine(x1, y1, x1, y2, ch); // Left
+    drawLine(x2, y1, x2, y2, ch); // Right
+}
+
+// Draws a circle accounting for non-square terminal text cells
+void drawCircle(int cx, int cy, int r, char ch) {
+    // We scan the bounding box of the circle
+    for (int y = cy - r; y <= cy + r; y++) {
+        for (int x = cx - (int)(r * X_SCALE); x <= cx + (int)(r * X_SCALE); x++) {
+            // Apply scale inverse to X distance calculation
+            double dx = (x - cx) / X_SCALE;
+            double dy = y - cy;
+            double distance = sqrt(dx * dx + dy * dy);
+            
+            // If the point is close to the perimeter edge, plot it
+            if (fabs(distance - r) < 0.5) {
+                plot(x, y, ch);
+            }
+        }
+    }
+}
+
+// Draws a triangle by connecting its 3 vertices
+void drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, char ch) {
+    drawLine(x1, y1, x2, y2, ch);
+    drawLine(x2, y2, x3, y3, ch);
+    drawLine(x3, y3, x1, y1, ch);
+}
+
+// Deletes objects by filling a user-defined bounding box back with '_'
+void deleteObject() {
+    int x1, y1, x2, y2;
+    printf("\n--- Delete / Erase Tool ---\n");
+    printf("Enter Top-Left corner to erase (x1 y1): ");
+    scanf("%d %d", &x1, &y1);
+    printf("Enter Bottom-Right corner to erase (x2 y2): ");
+    scanf("%d %d", &x2, &y2);
+
+    for (int y = y1; y <= y2; y++) {
+        for (int x = x1; x <= x2; x++) {
+            plot(x, y, '_');
+        }
+    }
+    printf("Area erased.\n");
+}
+
+```
+
+---
+
+### Alternate Implementation using `ncurses`
+
+If your project allows compiling against external packages, `ncurses` allows you to update the screen interactively without spamming the terminal scrolling buffer.
+
+> **Note:** To compile this version, you must link the curses library using flags: `gcc program.c -o program -lncurses -lm`
+
+```c
+#include <ncurses.h>
+#include <stdlib.h>
+#include <math.h>
+
+#define X_SCALE 2.0
+
+void initCanvas(int h, int w) {
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            mvaddch(y, x, '_');
+        }
+    }
+}
+
+void drawLineNC(int x1, int y1, int x2, int y2, char ch) {
+    int dx = abs(x2 - x1);
+    int dy = abs(y2 - y1);
+    int sx = (x1 < x2) ? 1 : -1;
+    int sy = (y1 < y2) ? 1 : -1;
+    int err = dx - dy;
+
+    while (1) {
+        mvaddch(y1, x1, ch);
+        if (x1 == x2 && y1 == y2) break;
+        int e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; x1 += sx; }
+        if (e2 < dx) { err += dx; y1 += sy; }
+    }
+}
+
+void drawCircleNC(int cx, int cy, int r, char ch) {
+    for (int y = cy - r; y <= cy + r; y++) {
+        for (int x = cx - (int)(r * X_SCALE); x <= cx + (int)(r * X_SCALE); x++) {
+            double dx = (x - cx) / X_SCALE;
+            double dy = y - cy;
+            if (fabs(sqrt(dx*dx + dy*dy) - r) < 0.5) {
+                mvaddch(y, x, ch);
+            }
+        }
+    }
+}
+
+int main() {
+    initscr();             // Start ncurses mode
+    cbreak();              // Line buffering disabled
+    noecho();              // Don't echo keys pressed
+    keypad(stdscr, TRUE);  // Enable arrow keys
+
+    int max_y, max_x;
+    getmaxyx(stdscr, max_y, max_x);
+    
+    // Reserve lower lines for interactive instructions
+    int canvas_h = max_y - 4; 
+    int canvas_w = max_x;
+
+    initCanvas(canvas_h, canvas_w);
+
+    int choice;
+    while(1) {
+        // Render control text at the base screen buffer
+        mvprintw(max_y - 3, 0, "1: Line | 2: Rect | 3: Circle | 4: Triangle | 5: Erase Box | 6: Clear | 7: Exit");
+        refresh();
+        
+        choice = getch();
+        if (choice == '7') break;
+
+        // Prompt input area 
+        move(max_y - 2, 0);
+        clrtoeol(); 
+
+        echo(); // Turn echo back on temporarily to see inputs
+        if (choice == '1') {
+            int x1, y1, x2, y2;
+            printw("Line (x1 y1 x2 y2): ");
+            scanw("%d %d %d %d", &x1, &y1, &x2, &y2);
+            drawLineNC(x1, y1, x2, y2, '*');
+        } 
+        else if (choice == '2') {
+            int x1, y1, x2, y2;
+            printw("Rectangle TopLeft & BottomRight (x1 y1 x2 y2): ");
+            scanw("%d %d %d %d", &x1, &y1, &x2, &y2);
+            drawLineNC(x1, y1, x2, y1, '*');
+            drawLineNC(x1, y2, x2, y2, '*');
+            drawLineNC(x1, y1, x1, y2, '*');
+            drawLineNC(x2, y1, x2, y2, '*');
+        }
+        else if (choice == '3') {
+            int cx, cy, r;
+            printw("Circle (cx cy radius): ");
+            scanw("%d %d %d", &cx, &cy, &r);
+            drawCircleNC(cx, cy, r, '*');
+        }
+        else if (choice == '4') {
+            int x1, y1, x2, y2, x3, y3;
+            printw("Triangle (x1 y1 x2 y2 x3 y3): ");
+            scanw("%d %d %d %d %d %d", &x1, &y1, &x2, &y2, &x3, &y3);
+            drawLineNC(x1, y1, x2, y2, '*');
+            drawLineNC(x2, y2, x3, y3, '*');
+            drawLineNC(x3, y3, x1, y1, '*');
+        }
+        else if (choice == '5') {
+            int x1, y1, x2, y2;
+            printw("Erase Area (x1 y1 x2 y2): ");
+            scanw("%d %d %d %d", &x1, &y1, &x2, &y2);
+            for(int y=y1; y<=y2; y++) {
+                for(int x=x1; x<=x2; x++) {
+                    mvaddch(y, x, '_');
+                }
+            }
+        }
+        else if (choice == '6') {
+            initCanvas(canvas_h, canvas_w);
+        }
+        noecho();
+        move(max_y - 2, 0); clrtoeol(); // Clear input logs text
+    }
+
+    endwin(); // Close down curses layer
+    return 0;
+}
+
+```
+
+PROMPT #2:
+
+Make it menu-driven, without any complex functions, just add the asked ones and make sure not to include unneccessary functionalities that may break the code. Dont use the ncurses library too.
+
+REPLY:
+
+Here's the final code according to the instructions added:
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+#define ROWS 20
+#define COLS 40
+
+char canvas[ROWS][COLS];
+
+// Initialize canvas
+void initialize_canvas() {
+    for(int i=0; i<ROWS; i++)
+        for(int j=0; j<COLS; j++)
+            canvas[i][j] = '_';
+}
+
+// Display canvas
+void display_canvas() {
+    for(int i=0; i<ROWS; i++) {
+        for(int j=0; j<COLS; j++)
+            printf("%c", canvas[i][j]);
+        printf("\n");
+    }
+}
+
+// Draw rectangle
+void draw_rectangle(int x, int y, int w, int h) {
+    for(int i=x; i<x+h && i<ROWS; i++)
+        for(int j=y; j<y+w && j<COLS; j++)
+            canvas[i][j] = '*';
+}
+
+// Draw line (simple version)
+void draw_line(int x1, int y1, int x2, int y2) {
+    int dx = abs(x2-x1), dy = abs(y2-y1);
+    int sx = (x1<x2)?1:-1;
+    int sy = (y1<y2)?1:-1;
+    int err = dx-dy;
+
+    while(1) {
+        if(x1>=0 && x1<ROWS && y1>=0 && y1<COLS)
+            canvas[x1][y1] = '*';
+        if(x1==x2 && y1==y2) break;
+        int e2 = 2*err;
+        if(e2 > -dy) { err -= dy; x1 += sx; }
+        if(e2 < dx) { err += dx; y1 += sy; }
+    }
+}
+
+// Draw circle
+void draw_circle(int xc, int yc, int r) {
+    for(int x=-r; x<=r; x++) {
+        for(int y=-r; y<=r; y++) {
+            if(x*x + y*y <= r*r+1) {
+                int px = xc+x, py = yc+y;
+                if(px>=0 && px<ROWS && py>=0 && py<COLS)
+                    canvas[px][py] = '*';
+            }
+        }
+    }
+}
+
+// Draw triangle
+void draw_triangle(int x1,int y1,int x2,int y2,int x3,int y3) {
+    draw_line(x1,y1,x2,y2);
+    draw_line(x2,y2,x3,y3);
+    draw_line(x3,y3,x1,y1);
+}
+
+// Delete object (replace region with '_')
+void delete_object(int x, int y, int w, int h) {
+    for(int i=x; i<x+h && i<ROWS; i++)
+        for(int j=y; j<y+w && j<COLS; j++)
+            canvas[i][j] = '_';
+}
+
+// Menu
+int main() {
+    int choice;
+    initialize_canvas();
+
+    while(1) {
+        printf("\nMenu:\n");
+        printf("1. Draw Rectangle\n");
+        printf("2. Draw Line\n");
+        printf("3. Draw Circle\n");
+        printf("4. Draw Triangle\n");
+        printf("5. Delete Object\n");
+        printf("6. Display Canvas\n");
+        printf("7. Exit\n");
+        printf("Enter choice: ");
+        scanf("%d", &choice);
+
+        if(choice==1) {
+            int x,y,w,h;
+            printf("Enter x y w h: ");
+            scanf("%d%d%d%d",&x,&y,&w,&h);
+            draw_rectangle(x,y,w,h);
+        }
+        else if(choice==2) {
+            int x1,y1,x2,y2;
+            printf("Enter x1 y1 x2 y2: ");
+            scanf("%d%d%d%d",&x1,&y1,&x2,&y2);
+            draw_line(x1,y1,x2,y2);
+        }
+        else if(choice==3) {
+            int xc,yc,r;
+            printf("Enter center x y and radius: ");
+            scanf("%d%d%d",&xc,&yc,&r);
+            draw_circle(xc,yc,r);
+        }
+        else if(choice==4) {
+            int x1,y1,x2,y2,x3,y3;
+            printf("Enter three points: ");
+            scanf("%d%d%d%d%d%d",&x1,&y1,&x2,&y2,&x3,&y3);
+            draw_triangle(x1,y1,x2,y2,x3,y3);
+        }
+        else if(choice==5) {
+            int x,y,w,h;
+            printf("Enter x y w h: ");
+            scanf("%d%d%d%d",&x,&y,&w,&h);
+            delete_object(x,y,w,h);
+        }
+        else if(choice==6) {
+            display_canvas();
+        }
+        else if(choice==7) {
+            break;
+        }
+        else {
+            printf("Invalid choice!\n");
+        }
+    }
+    return 0;
+}
